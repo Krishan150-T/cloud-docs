@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   deleteDocument,
@@ -27,6 +27,7 @@ export function DashboardPage({ token, user, onLogout }: DashboardPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const storageUsage = useMemo(() => {
     return stats ? bytesToMegabytes(stats.totalSizeBytes) : '0.00 MB';
@@ -67,6 +68,9 @@ export function DashboardPage({ token, user, onLogout }: DashboardPageProps) {
       await uploadDocument({ token, file: selectedFile, title });
       setSelectedFile(null);
       setTitle('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       await loadData();
     } catch (uploadError) {
       setError(
@@ -137,15 +141,30 @@ export function DashboardPage({ token, user, onLogout }: DashboardPageProps) {
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700">File</span>
-                <input
-                  type="file"
-                  className="w-full rounded-xl border border-orange-200 px-3 py-2 text-sm"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    setSelectedFile(file);
-                  }}
-                  required
-                />
+                <div className="rounded-xl border border-orange-200 bg-white text-sm text-slate-800">
+                  <input
+                    ref={fileInputRef}
+                    id="document-file"
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setSelectedFile(file);
+                    }}
+                    required
+                  />
+                  <label
+                    htmlFor="document-file"
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2"
+                  >
+                    <span className="rounded-lg bg-slate-100 px-3 py-2 font-medium text-slate-700 transition hover:bg-slate-200">
+                      Choose File
+                    </span>
+                    <span className="min-w-0 truncate text-slate-500">
+                      {selectedFile?.name ?? 'No file chosen'}
+                    </span>
+                  </label>
+                </div>
               </label>
               <button
                 type="submit"
