@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DocumentsModule } from './documents/documents.module';
+import { HealthModule } from './health/health.module';
 import { databaseConfig } from './database/database.config';
 import { ConfigModule } from '@nestjs/config';
 import config from './config/config';
@@ -19,6 +20,7 @@ import path from 'node:path';
     TypeOrmModule.forRootAsync(databaseConfig),
     AuthModule,
     DocumentsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
