@@ -14,10 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { createReadStream } from 'node:fs';
-import { extname, join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
+import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -36,13 +33,7 @@ export class DocumentsController {
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: DocumentsService.uploadsDir(),
-        filename: (_, file, callback) => {
-          const extension = extname(file.originalname);
-          callback(null, `${uuidv4()}${extension}`);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   )
   async upload(
@@ -54,13 +45,9 @@ export class DocumentsController {
       throw new BadRequestException('No file uploaded');
     }
 
-    return this.documentsService.createDocument({
+    return this.documentsService.uploadDocument({
       ownerId: req.user.userId,
-      originalName: file.originalname,
-      storedName: file.filename,
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      storagePath: join(DocumentsService.uploadsDir(), file.filename),
+      file,
       title,
     });
   }
@@ -103,10 +90,12 @@ export class DocumentsController {
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ): Promise<StreamableFile> {
-    const document = await this.documentsService.getById(req.user.userId, id);
-    const file = createReadStream(document.storagePath);
+    const { document, stream } = await this.documentsService.getDownloadStream(
+      req.user.userId,
+      id,
+    );
 
-    return new StreamableFile(file, {
+    return new StreamableFile(stream, {
       type: document.mimeType,
       disposition: `attachment; filename="${document.originalName}"`,
     });

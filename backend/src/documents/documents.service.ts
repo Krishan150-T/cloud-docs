@@ -2,28 +2,22 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { promises as fs } from 'node:fs';
+import { extname } from 'node:path';
+import { Readable } from 'node:stream';
 import { Repository } from 'typeorm';
-import { UPLOADS_DIR } from './documents.constants';
+import { v4 as uuidv4 } from 'uuid';
 import { DocumentEntity } from '../database/entities/document.entity';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
-export class DocumentsService implements OnModuleInit {
+export class DocumentsService {
   constructor(
     @InjectRepository(DocumentEntity)
     private readonly documentsRepository: Repository<DocumentEntity>,
+    private readonly s3Service: S3Service,
   ) {}
-
-  async onModuleInit(): Promise<void> {
-    await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  }
-
-  static uploadsDir(): string {
-    return UPLOADS_DIR;
-  }
 
   async createDocument(input: {
     ownerId: string;
@@ -45,6 +39,35 @@ export class DocumentsService implements OnModuleInit {
     });
 
     return this.documentsRepository.save(document);
+  }
+
+  async uploadDocument(input: {
+    ownerId: string;
+    file: Express.Multer.File;
+    title?: string;
+  }): Promise<DocumentEntity> {
+    const storedName = `${uuidv4()}${extname(input.file.originalname)}`;
+
+    await this.s3Service.uploadFile(
+      storedName,
+      input.file.buffer,
+      input.file.mimetype,
+    );
+
+    try {
+      return await this.createDocument({
+        ownerId: input.ownerId,
+        originalName: input.file.originalname,
+        storedName,
+        mimeType: input.file.mimetype,
+        sizeBytes: input.file.size,
+        storagePath: storedName,
+        title: input.title,
+      });
+    } catch (error) {
+      await this.s3Service.deleteFile(storedName).catch(() => undefined);
+      throw error;
+    }
   }
 
   listByOwner(ownerId: string): Promise<DocumentEntity[]> {
@@ -91,14 +114,20 @@ export class DocumentsService implements OnModuleInit {
       throw new ForbiddenException('You do not have access to this document');
     }
 
-    try {
-      await fs.unlink(document.storagePath);
-    } catch {
-      // Missing files are ignored to keep metadata cleanup resilient.
-    }
+    await this.s3Service.deleteFile(document.storagePath);
 
     await this.documentsRepository.delete({ id: document.id });
     return { deleted: true };
+  }
+
+  async getDownloadStream(
+    ownerId: string,
+    id: string,
+  ): Promise<{ document: DocumentEntity; stream: Readable }> {
+    const document = await this.getById(ownerId, id);
+    const stream = await this.s3Service.getFileStream(document.storagePath);
+
+    return { document, stream };
   }
 
   async getStats(ownerId: string): Promise<{

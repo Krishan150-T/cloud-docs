@@ -7,14 +7,14 @@ import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { databaseConfig } from './database/database.config';
 import { ConfigModule } from '@nestjs/config';
-import config from './config/config';
+import config, { awsConfig } from './config/config';
 import path from 'node:path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [config],
+      load: [config, awsConfig],
       envFilePath: path.join(process.cwd(), '.env'),
     }),
     TypeOrmModule.forRootAsync(databaseConfig),
