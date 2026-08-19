@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloud Docs — AWS Cloud-Native POC</title>
+<style>
+  :root{
+    --bg:#07111f;
+    --panel:#0d1b2e;
+    --panel2:#10243b;
+    --text:#eef5ff;
+    --muted:#9fb2c8;
+    --accent:#ff9900;
+    --accent2:#6cb6ff;
+    --green:#55d6a5;
+    --border:#28415d;
+    --danger:#ff7272;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  body{background:
+    radial-gradient(circle at 85% 10%,rgba(255,153,0,.10),transparent 30%),
+    radial-gradient(circle at 10% 90%,rgba(108,182,255,.08),transparent 30%),
+    var(--bg)}
+  .slide{display:none;width:100vw;height:100vh;padding:5.5vh 6vw 6vh;position:relative}
+  .slide.active{display:flex;flex-direction:column}
+  .eyebrow{color:var(--accent);font-size:1rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.2vh}
+  h1{font-size:clamp(2.5rem,5vw,5.5rem);line-height:1.02;margin:0 0 2vh;letter-spacing:-.045em}
+  h2{font-size:clamp(2rem,3.8vw,4rem);line-height:1.05;margin:0 0 3vh;letter-spacing:-.035em}
+  h3{font-size:clamp(1.1rem,1.7vw,1.7rem);margin:0 0 1vh}
+  p,li{font-size:clamp(1rem,1.35vw,1.4rem);line-height:1.5}
+  .subtitle{font-size:clamp(1.1rem,1.8vw,1.8rem);color:var(--muted);max-width:850px}
+  .footer{position:absolute;bottom:2.2vh;left:6vw;right:6vw;display:flex;justify-content:space-between;
+    color:#6f859c;font-size:.82rem}
+  .grid{display:grid;gap:1.5rem}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .card{background:linear-gradient(145deg,rgba(16,36,59,.9),rgba(9,24,40,.9));
+    border:1px solid var(--border);border-radius:18px;padding:1.5rem;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+  .card p{color:var(--muted);margin:.5rem 0 0}
+  .pill{display:inline-flex;padding:.35rem .7rem;border:1px solid #38536f;border-radius:999px;color:#cfe0f3;font-size:.85rem}
+  .service-title{display:flex;align-items:center;gap:.75rem}
+  .icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(255,153,0,.12);
+    color:var(--accent);font-weight:800;border:1px solid rgba(255,153,0,.3)}
+  .flow{display:flex;align-items:center;justify-content:center;gap:0;margin:3vh 0;flex-wrap:nowrap}
+  .node{min-width:145px;text-align:center;padding:1rem;border:1px solid var(--border);border-radius:14px;background:var(--panel2)}
+  .node strong{display:block;font-size:1.05rem}
+  .node small{color:var(--muted)}
+  .arrow{font-size:1.6rem;color:var(--accent);padding:0 .7rem}
+  .network{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1vh}
+  .zone{border:1px dashed #3a5875;border-radius:20px;padding:1.3rem}
+  .zone.public{background:rgba(255,153,0,.045)}
+  .zone.private{background:rgba(108,182,255,.045)}
+  .zone-label{font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-bottom:1rem}
+  .zone.public .zone-label{color:var(--accent)}
+  .zone.private .zone-label{color:var(--accent2)}
+  .mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem}
+  .mini{padding:.9rem;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+  .mini strong{display:block}
+  .mini span{font-size:.85rem;color:var(--muted)}
+  .architecture{position:relative;flex:1;display:flex;align-items:center;justify-content:center}
+  .arch-wrap{width:min(1050px,90vw);position:relative}
+  .arch-internet{text-align:center;margin-bottom:1rem}
+  .arch-internet span{display:inline-block;padding:.55rem 1rem;border:1px solid #3a5875;border-radius:999px;color:#dce9f7}
+  .arch-arrow{text-align:center;color:var(--accent);font-size:1.5rem;margin:.35rem}
+  .alb{margin:auto;width:270px;text-align:center;padding:1rem;border:1px solid rgba(255,153,0,.5);
+    background:rgba(255,153,0,.09);border-radius:15px}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;position:relative;margin-top:.5rem}
+  .branch:before{content:"";position:absolute;left:25%;right:25%;top:-1.3rem;border-top:1px solid #48627d}
+  .branch-col{text-align:center}
+  .branch-col:before{content:"";display:block;width:1px;height:1.3rem;background:#48627d;margin:-1.3rem auto 0}
+  .ecs{padding:1rem;border:1px solid #365b7d;border-radius:15px;background:rgba(108,182,255,.06)}
+  .ecs strong{display:block}
+  .ecs small{color:var(--muted)}
+  .data-row{display:flex;gap:2rem;justify-content:center;margin-top:1.5rem}
+  .data-node{width:220px;text-align:center;padding:1rem;border:1px solid #365b7d;border-radius:15px}
+  .data-node.s3{border-color:rgba(85,214,165,.45);background:rgba(85,214,165,.05)}
+  .data-node.rds{border-color:rgba(108,182,255,.45);background:rgba(108,182,255,.05)}
+  .label{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.4rem}
+  .big-quote{font-size:clamp(1.5rem,2.6vw,2.7rem);line-height:1.25;max-width:1000px;border-left:4px solid var(--accent);padding-left:1.5rem;margin:3vh 0}
+  .code-flow{font-family:"SFMono-Regular",Consolas,monospace;background:#050c15;border:1px solid #20374f;border-radius:16px;padding:1.3rem;font-size:clamp(.9rem,1.3vw,1.25rem);line-height:1.8}
+  .hl{color:var(--accent)}
+  .blue{color:var(--accent2)}
+  .green{color:var(--green)}
+  .red{color:var(--danger)}
+  .takeaway{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2vh}
+  .takeaway .card{padding:1.2rem}
+  .takeaway strong{display:block;margin-bottom:.4rem}
+  .takeaway span{color:var(--muted);font-size:.95rem;line-height:1.4}
+  .notes{color:#607890;font-size:.78rem;margin-top:auto}
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:100;transition:width .25s}
+  .controls{position:fixed;right:2rem;bottom:1.5rem;z-index:100;display:flex;gap:.5rem}
+  button{background:#12253a;color:#cfe0f3;border:1px solid #2d4965;border-radius:8px;padding:.45rem .7rem;cursor:pointer}
+  button:hover{border-color:var(--accent);color:white}
+  .title-mark{display:flex;align-items:center;gap:1rem;margin-bottom:3vh}
+  .aws-mark{width:58px;height:58px;border-radius:15px;background:var(--accent);color:#111;display:grid;place-items:center;font-weight:900;font-size:1.25rem}
+  .two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center}
+  @media(max-width:900px){
+    .grid-3,.takeaway{grid-template-columns:1fr 1fr}
+    .two-col{grid-template-columns:1fr}
+    .flow{flex-wrap:wrap}
+    .branch{gap:1rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<section class="slide active">
+  <div class="eyebrow">AWS Cloud-Native Proof of Concept</div>
+  <div class="title-mark">
+    <div class="aws-mark">AWS</div>
+    <div>
+      <h1>Cloud Docs</h1>
+      <div class="subtitle">A full-stack document management application deployed on AWS using containers, managed database, object storage, networking and monitoring.</div>
+    </div>
+  </div>
+  <div class="grid grid-3" style="margin-top:5vh">
+    <div class="card"><div class="service-title"><div class="icon">01</div><h3>Compute</h3></div><p>ECS Fargate runs the frontend and backend containers.</p></div>
+    <div class="card"><div class="service-title"><div class="icon">02</div><h3>Storage</h3></div><p>RDS stores application metadata and S3 stores uploaded documents.</p></div>
+    <div class="card"><div class="service-title"><div class="icon">03</div><h3>Networking</h3></div><p>VPC and ALB provide controlled connectivity and public access.</p></div>
+  </div>
+  <div class="footer"><span>PART 1 · AWS SERVICES & CONCEPTS</span><span>Cloud Docs POC</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">01 · The problem</div>
+  <h2>What does a full-stack application need?</h2>
+  <p class="subtitle">Our application is more than frontend + backend. Once we deploy it to the cloud, we need infrastructure for every part of the system.</p>
+  <div class="grid grid-3" style="margin-top:5vh">
+    <div class="card"><h3>Compute</h3><p>Where do our application containers actually run?</p></div>
+    <div class="card"><h3>Database</h3><p>Where do we persist users, documents and application metadata?</p></div>
+    <div class="card"><h3>File Storage</h3><p>Where do uploaded files live independently of containers?</p></div>
+    <div class="card"><h3>Networking</h3><p>How do users reach the application while keeping internal resources private?</p></div>
+    <div class="card"><h3>Security</h3><p>Which service or application component is allowed to access which resource?</p></div>
+    <div class="card"><h3>Observability</h3><p>How do we inspect application logs and determine whether services are healthy?</p></div>
+  </div>
+  <div class="big-quote">AWS gives us managed services for these individual responsibilities — and our POC demonstrates how they work together.</div>
+  <div class="footer"><span>PART 1 · AWS SERVICES & CONCEPTS</span><span>02 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">02 · Architecture</div>
+  <h2>How the pieces fit together</h2>
+  <div class="architecture">
+    <div class="arch-wrap">
+      <div class="arch-internet"><span>INTERNET · USER</span></div>
+      <div class="arch-arrow">↓</div>
+      <div class="alb"><strong>Application Load Balancer</strong><br><small>Public subnets · HTTP : 80</small></div>
+      <div class="branch">
+        <div class="branch-col">
+          <div class="ecs"><strong>Frontend ECS Service</strong><small>Fargate · Private subnet</small></div>
+        </div>
+        <div class="branch-col">
+          <div class="ecs"><strong>Backend ECS Service</strong><small>Fargate · Private subnet</small></div>
+        </div>
+      </div>
+      <div class="data-row">
+        <div class="data-node rds"><div class="label">Persistent data</div><strong>Amazon RDS</strong><br><small>PostgreSQL</small></div>
+        <div class="data-node s3"><div class="label">Object storage</div><strong>Amazon S3</strong><br><small>Uploaded documents</small></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Public entry point → private application layer → persistent storage</span><span>03 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">03 · Networking</div>
+  <h2>VPC: isolate the application</h2>
+  <div class="two-col">
+    <div>
+      <div class="network">
+        <div class="zone public">
+          <div class="zone-label">Public subnets</div>
+          <div class="mini-grid">
+            <div class="mini"><strong>ALB</strong><span>Internet-facing</span></div>
+            <div class="mini"><strong>Internet Gateway</strong><span>Inbound/outbound internet</span></div>
+          </div>
+        </div>
+        <div class="zone private">
+          <div class="zone-label">Private subnets</div>
+          <div class="mini-grid">
+            <div class="mini"><strong>ECS</strong><span>Application containers</span></div>
+            <div class="mini"><strong>RDS</strong><span>PostgreSQL database</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="code-flow" style="margin-top:1.5rem">
+        <span class="hl">Internet</span> → <span class="blue">ALB</span> → <span class="green">ECS</span> → <span class="green">RDS</span><br>
+        <span class="green">Private resources</span> → NAT Gateway → outbound internet
+      </div>
+    </div>
+    <div class="card">
+      <h3>Why this design?</h3>
+      <p>Only the ALB is exposed as the public entry point.</p>
+      <p>ECS tasks do not receive public IP addresses.</p>
+      <p>RDS is not publicly accessible.</p>
+      <p>Security groups control which layer can communicate with the next layer.</p>
+      <div style="margin-top:1rem"><span class="pill">2 public subnets</span> <span class="pill">2 private subnets</span> <span class="pill">2 AZs</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>VPC · SUBNETS · ROUTING · SECURITY GROUPS</span><span>04 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">04 · Containers</div>
+  <h2>ECR + ECS + Fargate</h2>
+  <div class="flow" style="margin-top:6vh">
+    <div class="node"><strong>Source Code</strong><small>Frontend + Backend</small></div>
+    <div class="arrow">→</div>
+    <div class="node"><strong>Docker Build</strong><small>Container images</small></div>
+    <div class="arrow">→</div>
+    <div class="node"><strong>ECR</strong><small>Private image registry</small></div>
+    <div class="arrow">→</div>
+    <div class="node"><strong>ECS Fargate</strong><small>Run containers</small></div>
+  </div>
+  <div class="grid grid-2" style="margin-top:4vh">
+    <div class="card">
+      <div class="service-title"><div class="icon">ECS</div><h3>Elastic Container Service</h3></div>
+      <p>Manages the deployment and lifecycle of our containerized frontend and backend services.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">F</div><h3>Fargate</h3></div>
+      <p>Runs the ECS tasks without requiring us to provision or manage EC2 servers for the container workload.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">ECR</div><h3>Elastic Container Registry</h3></div>
+      <p>Stores the Docker images that ECS pulls when launching our tasks.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">ALB</div><h3>Load Balancer</h3></div>
+      <p>Routes incoming traffic to the appropriate ECS target group and performs health checks.</p>
+    </div>
+  </div>
+  <div class="footer"><span>CONTAINER BUILD → REGISTRY → SERVERLESS CONTAINER RUNTIME</span><span>05 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">05 · Data layer</div>
+  <h2>RDS for metadata. S3 for files.</h2>
+  <div class="two-col" style="margin-top:3vh">
+    <div class="card">
+      <div class="service-title"><div class="icon">DB</div><h3>Amazon RDS · PostgreSQL</h3></div>
+      <p><strong>Stores:</strong></p>
+      <ul>
+        <li>Application data</li>
+        <li>Document metadata</li>
+        <li>S3 object keys / references</li>
+      </ul>
+      <p>RDS gives us managed PostgreSQL rather than tying database persistence to an ECS container.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">S3</div><h3>Amazon S3</h3></div>
+      <p><strong>Stores:</strong></p>
+      <ul>
+        <li>Actual uploaded documents</li>
+        <li>Objects independent of ECS task lifecycle</li>
+      </ul>
+      <p>The bucket remains private; the backend controls access.</p>
+    </div>
+  </div>
+  <div class="code-flow" style="margin-top:3vh;text-align:center">
+    <span class="hl">Upload</span> → Backend → <span class="green">S3: actual file</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘ <span class="blue">RDS: metadata + S3 key</span>
+  </div>
+  <div class="big-quote" style="margin-top:2vh">ECS storage is ephemeral. S3 gives the uploaded files durable storage outside the container lifecycle.</div>
+  <div class="footer"><span>RDS = STRUCTURED DATA · S3 = OBJECT STORAGE</span><span>06 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">06 · Security & observability</div>
+  <h2>Who can access what — and how do we know it's working?</h2>
+  <div class="grid grid-2" style="margin-top:2vh">
+    <div class="card">
+      <div class="service-title"><div class="icon">IAM</div><h3>IAM Roles</h3></div>
+      <p>The ECS <strong>execution role</strong> lets ECS pull images, write logs and retrieve configured secrets.</p>
+      <p>The ECS <strong>task role</strong> gives application code runtime permissions such as S3 access.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">SM</div><h3>Secrets Manager</h3></div>
+      <p>Database credentials are managed securely rather than being hardcoded into the application configuration.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">SG</div><h3>Security Groups</h3></div>
+      <p>Traffic is restricted between layers: ALB → ECS → RDS. RDS accepts PostgreSQL traffic only from the intended application layer.</p>
+    </div>
+    <div class="card">
+      <div class="service-title"><div class="icon">CW</div><h3>CloudWatch</h3></div>
+      <p>Frontend and backend container logs are collected here for monitoring, debugging and troubleshooting.</p>
+    </div>
+  </div>
+  <div class="takeaway">
+    <div class="card"><strong>ALB</strong><span>Public traffic + health checks</span></div>
+    <div class="card"><strong>IAM</strong><span>Service permissions</span></div>
+    <div class="card"><strong>Secrets</strong><span>Credential management</span></div>
+    <div class="card"><strong>CloudWatch</strong><span>Application visibility</span></div>
+  </div>
+  <div class="footer"><span>SECURITY + ACCESS CONTROL + OBSERVABILITY</span><span>07 / 08</span></div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">07 · Putting it together</div>
+  <h2>One document upload — end to end</h2>
+  <div class="architecture" style="align-items:flex-start;padding-top:2vh">
+    <div style="width:min(1050px,90vw)">
+      <div class="flow">
+        <div class="node"><strong>User</strong><small>Selects document</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><strong>ALB</strong><small>/api/*</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><strong>ECS Backend</strong><small>NestJS API</small></div>
+      </div>
+      <div style="text-align:center;font-size:1.5rem;color:var(--accent)">↓</div>
+      <div class="data-row">
+        <div class="data-node s3">
+          <div class="label">File</div>
+          <strong>Amazon S3</strong>
+          <p style="font-size:.95rem;color:var(--muted)">Actual document object</p>
+        </div>
+        <div class="data-node rds">
+          <div class="label">Metadata</div>
+          <strong>Amazon RDS</strong>
+          <p style="font-size:.95rem;color:var(--muted)">Document record + S3 key</p>
+        </div>
+      </div>
+      <div class="big-quote" style="margin:4vh auto 0">The AWS services are not isolated features — together they form the runtime architecture of our application.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:auto;text-align:center">
+    <strong style="font-size:1.25rem">Next: let's see how our code implements this flow.</strong>
+  </div>
+  <div class="footer"><span>TRANSITION → PART 2: CODE WALKTHROUGH + LIVE APPLICATION DEMO</span><span>08 / 08</span></div>
+</section>
+
+<div class="controls">
+  <button onclick="prev()">←</button>
+  <button onclick="next()">→</button>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let current = 0;
+  function show(i){
+    current = Math.max(0, Math.min(slides.length-1, i));
+    slides.forEach((s,n)=>s.classList.toggle('active',n===current));
+    document.getElementById('progress').style.width=((current+1)/slides.length*100)+'%';
+    history.replaceState(null,'','#'+(current+1));
+  }
+  function next(){ show(current+1); }
+  function prev(){ show(current-1); }
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();next();}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev();}
+    if(e.key==='Home'){e.preventDefault();show(0);}
+    if(e.key==='End'){e.preventDefault();show(slides.length-1);}
+  });
+  const initial=parseInt(location.hash.slice(1),10);
+  show(Number.isFinite(initial)?initial-1:0);
+</script>
+</body>
+</html>
